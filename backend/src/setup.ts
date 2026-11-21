@@ -58,15 +58,36 @@ async function ensureBucket() {
   console.log(`setup: created private storage bucket "${config.storageBucket}" ✅`);
 }
 
+const isUrl = (v: string, protocols: string[]) => {
+  try {
+    return protocols.includes(new URL(v).protocol);
+  } catch {
+    return false;
+  }
+};
+
 function checkConfig() {
   const problems: string[] = [];
+  // Never print the values themselves — they contain passwords/keys.
+  const db = config.databaseUrl;
+  if (/\[YOUR-[A-Z-]*PASSWORD\]/i.test(db)) {
+    problems.push('DATABASE_URL still contains the [YOUR-PASSWORD] placeholder — replace it (including the brackets) with your database password');
+  } else if (!isUrl(db, ['postgres:', 'postgresql:'])) {
+    problems.push('DATABASE_URL is not a valid database link — it must start with postgresql:// (copy it again from Supabase → Connect → Session pooler)');
+  }
+  if (config.authMode === 'supabase' && config.supabaseUrl && !isUrl(config.supabaseUrl, ['https:', 'http:'])) {
+    problems.push('SUPABASE_URL is not a valid address — it should look like https://abcd.supabase.co');
+  }
   if (config.authMode === 'supabase') {
     if (!config.supabaseUrl) problems.push('SUPABASE_URL is empty');
     if (!config.supabaseAnonKey) problems.push('SUPABASE_ANON_KEY is empty');
     if (!config.supabaseServiceKey) problems.push('SUPABASE_SERVICE_ROLE_KEY is empty');
   }
   if (config.storageDriver === 'supabase' && !config.supabaseServiceKey) problems.push('SUPABASE_SERVICE_ROLE_KEY is needed for storage');
-  if (problems.length) throw new Error(`Configuration problem: ${problems.join('; ')}`);
+  if (problems.length) {
+    console.error('\n❌ CONFIGURATION PROBLEM — fix in Render → Environment, then redeploy:\n' + problems.map((p) => ` • ${p}`).join('\n') + '\n');
+    throw new Error(`Configuration problem: ${problems.join('; ')}`);
+  }
 }
 
 export async function ensureSetup() {

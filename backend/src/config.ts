@@ -1,5 +1,21 @@
 import 'dotenv/config';
 
+/**
+ * Values are often pasted from a notes app on a phone, so forgive the usual slips:
+ * surrounding spaces/quotes, or the label pasted along with the value ("DATABASE_URL = postgres://…").
+ */
+export function cleanEnvValue(name: string, raw: string | undefined): string | undefined {
+  if (raw === undefined) return undefined;
+  let v = raw.trim();
+  const label = new RegExp(`^${name}\\s*[:=]\\s*`, 'i');
+  v = v.replace(label, '').trim();
+  v = v.replace(/^["'`]+|["'`]+$/g, '').trim();
+  return v;
+}
+for (const k of ['DATABASE_URL', 'SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'PUBLIC_BASE_URL']) {
+  if (process.env[k] !== undefined) process.env[k] = cleanEnvValue(k, process.env[k]);
+}
+
 function req(name: string, fallback?: string): string {
   const v = process.env[name] ?? fallback;
   if (v === undefined || v === '') throw new Error(`Missing env var ${name}`);
