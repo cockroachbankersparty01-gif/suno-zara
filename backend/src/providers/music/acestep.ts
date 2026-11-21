@@ -121,6 +121,10 @@ export class AceStepProvider implements MusicProvider {
   }
 
   private async download(r: ResultItem, req: MusicRequest, i: number, taskId: string): Promise<MusicResult> {
+    if (!r.file) {
+      // ACE-Step reports success even when saving the file failed (e.g. ffmpeg missing for MP3 export).
+      throw new Error('ACE-Step finished but produced no audio file. Is ffmpeg installed on the GPU machine? (see its log)');
+    }
     const url = r.file.startsWith('http') ? r.file : `${this.baseUrl}${r.file}`;
     const res = await fetch(url, { headers: this.auth() });
     if (!res.ok) throw new Error(`acestep download ${res.status}`);

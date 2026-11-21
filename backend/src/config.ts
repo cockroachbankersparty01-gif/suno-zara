@@ -73,9 +73,9 @@ export const config = {
     maxActiveGenerations: int('MAX_ACTIVE_GENERATIONS', 2),
     generationsPerMinute: int('GENERATIONS_PER_MINUTE', 6),
     requestsPerMinute: int('REQUESTS_PER_MINUTE', 120),
-    defaultDurationSec: int('DEFAULT_DURATION_SEC', 120),
+    defaultDurationSec: int('DEFAULT_DURATION_SEC', 180),
     extendBySec: int('EXTEND_BY_SEC', 30),
-    maxDurationSec: int('MAX_DURATION_SEC', 240),
+    maxDurationSec: int('MAX_DURATION_SEC', 360),
   },
   tosVersion: process.env.TOS_VERSION ?? '2026-11-01',
 };

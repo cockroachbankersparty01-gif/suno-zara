@@ -3,7 +3,8 @@ import { config } from './config.js';
 
 export const pool = new pg.Pool({
   connectionString: config.databaseUrl,
-  max: 10,
+  // Keep small: the API (Render) and the GPU worker (Kaggle) share Supabase's free-tier connection limit.
+  max: Number(process.env.DB_POOL_MAX ?? 5),
   ssl: config.databaseUrl.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
 });
 

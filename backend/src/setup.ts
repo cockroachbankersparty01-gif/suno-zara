@@ -66,7 +66,7 @@ const isUrl = (v: string, protocols: string[]) => {
   }
 };
 
-function checkConfig() {
+function checkConfig(api: boolean) {
   const problems: string[] = [];
   // Never print the values themselves — they contain passwords/keys.
   const db = config.databaseUrl;
@@ -78,7 +78,7 @@ function checkConfig() {
   if (config.authMode === 'supabase' && config.supabaseUrl && !isUrl(config.supabaseUrl, ['https:', 'http:'])) {
     problems.push('SUPABASE_URL is not a valid address — it should look like https://abcd.supabase.co');
   }
-  if (config.authMode === 'supabase') {
+  if (api && config.authMode === 'supabase') {
     if (!config.supabaseUrl) problems.push('SUPABASE_URL is empty');
     if (!config.supabaseAnonKey) problems.push('SUPABASE_ANON_KEY is empty');
     if (!config.supabaseServiceKey) problems.push('SUPABASE_SERVICE_ROLE_KEY is empty');
@@ -90,8 +90,9 @@ function checkConfig() {
   }
 }
 
-export async function ensureSetup() {
-  checkConfig();
+/** `api: false` for worker-only processes (e.g. the Kaggle GPU worker), which don't sign anyone in. */
+export async function ensureSetup({ api = true }: { api?: boolean } = {}) {
+  checkConfig(api);
   await ensureDatabase();
   await ensureBucket();
 }

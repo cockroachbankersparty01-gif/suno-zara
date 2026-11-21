@@ -28,6 +28,7 @@ jobs:
         run: df -h / /mnt
       - name: Install ACE-Step 1.5
         run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
           sudo mkdir -p /mnt/hf /mnt/uv-cache && sudo chown -R $USER /mnt
           curl -LsSf https://astral.sh/uv/install.sh | sh
           git clone --depth 1 https://github.com/ACE-Step/ACE-Step-1.5.git /mnt/ACE-Step-1.5

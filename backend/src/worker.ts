@@ -5,6 +5,6 @@ import { ensureSetup } from './setup.js';
 process.on('SIGTERM', stopWorker);
 process.on('SIGINT', stopWorker);
 
-await ensureSetup();
+await ensureSetup({ api: false });
 await startWorker();
 process.exit(0);

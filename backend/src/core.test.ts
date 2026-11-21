@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { MockMusicProvider } from './providers/music/mock.js';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { AceStepProvider } from './providers/music/acestep.js';
+import { AceStepProvider, detectVocalLanguage } from './providers/music/acestep.js';
 import { MockLyricsProvider, OpenAICompatibleLyricsProvider } from './providers/lyrics/index.js';
 import { MockImageProvider, PollinationsImageProvider } from './providers/image/index.js';
 import { encodeWav } from './lib/audio.js';
@@ -189,4 +189,15 @@ test('Pollinations cover URL is free-tier friendly and deterministic', () => {
   assert.equal(u.searchParams.get('seed'), '5');
   assert.equal(u.searchParams.get('token'), null);
   assert.match(decodeURIComponent(u.pathname), /album cover art, lo-fi, monsoon/);
+});
+
+test('vocal language detection for Hindi / Hinglish / English', () => {
+  const golu = '[Verse 1]\nSubah subah aankh khuli, angdaai li badi,\nMumma boli "uth ja Golu", baj gayi ghadi!\nTakiye pe chadh ke main bana superman';
+  assert.equal(detectVocalLanguage(golu), 'hi');
+  assert.equal(detectVocalLanguage('तुम ही हो'), 'hi');
+  assert.equal(detectVocalLanguage('Walking through the night, feeling something new, every little light', []), 'en');
+  assert.equal(detectVocalLanguage('la la la', ['bollywood']), 'hi');
+  const f = AceStepProvider.buildFields({ ...base, lyrics: golu, variations: 2 });
+  assert.equal(f.vocal_language, 'hi');
+  assert.equal(AceStepProvider.buildFields({ ...base, instrumental: true }).vocal_language, 'en');
 });
