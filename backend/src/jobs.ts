@@ -165,6 +165,16 @@ export async function runGeneration(gen: GenerationRow) {
 }
 
 async function handleFailure(gen: GenerationRow, err: Error) {
+  if (err.name === 'ProviderUnavailableError') {
+    // Not the song's fault: put it back and wait for the music server, without using up an attempt.
+    console.warn(`generation ${gen.id}: ${err.message}; waiting for the music server and retrying`);
+    await query(
+      `update generations set status = 'queued', attempts = greatest(attempts - 1, 0), status_text = 'Waiting for the music server…',
+              locked_at = null, run_after = now() + interval '30 seconds' where id = $1`,
+      [gen.id],
+    );
+    return;
+  }
   const final = err instanceof PermanentError || gen.attempts >= gen.max_attempts;
   console.error(`generation ${gen.id} attempt ${gen.attempts}/${gen.max_attempts} failed:`, err.message);
   if (final) {

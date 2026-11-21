@@ -20,6 +20,13 @@ interface ResultItem { file: string; seed_value?: string; dit_model?: string; lm
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** The music server is down/restarting: the job should wait, not count as a failed attempt. */
+export class ProviderUnavailableError extends Error {
+  name = 'ProviderUnavailableError';
+}
+const isConnError = (e: unknown) =>
+  e instanceof TypeError || /ECONNREFUSED|ECONNRESET|fetch failed|socket hang up|other side closed/i.test(String((e as Error)?.message ?? e) + String((e as any)?.cause?.code ?? ''));
+
 // Common words in romanized Hindi/Hinglish lyrics ("main hoon", "dil", "pyaar"…).
 const HINDI_WORDS = new Set(('hai hain hoon hu main mein mera meri mere tera teri tere tum tu hum aap ka ki ke ko se ne bhi ' +
   'nahi nahin kya kyun dil pyaar pyar zindagi saath sapne sapna yaar jaan raat din aaj kal chalo karein karo raha rahi ' +
@@ -80,6 +87,30 @@ export class AceStepProvider implements MusicProvider {
   }
 
   async generate(req: MusicRequest, ctx: ProgressContext): Promise<MusicResult[]> {
+    // One variation at a time by default: half the GPU/CPU memory of a batch of 2, which matters on free T4s.
+    const batch = process.env.ACESTEP_BATCH === 'true';
+    if (batch || req.variations <= 1) return this.run(req, ctx);
+    const out: MusicResult[] = [];
+    for (let v = 0; v < req.variations; v++) {
+      const part = await this.run(
+        { ...req, variations: 1, seed: req.seed + v },
+        { onProgress: (p, t) => ctx.onProgress((v * 100 + p) / req.variations, `${t} (${v + 1}/${req.variations})`) },
+      );
+      out.push(...part.map((r) => ({ ...r, seed: r.seed ?? req.seed + v })));
+    }
+    return out;
+  }
+
+  private async run(req: MusicRequest, ctx: ProgressContext): Promise<MusicResult[]> {
+    try {
+      return await this.runOnce(req, ctx);
+    } catch (e) {
+      if (isConnError(e)) throw new ProviderUnavailableError(`music server not reachable at ${this.baseUrl}`);
+      throw e;
+    }
+  }
+
+  private async runOnce(req: MusicRequest, ctx: ProgressContext): Promise<MusicResult[]> {
     const form = new FormData();
     for (const [k, v] of Object.entries(AceStepProvider.buildFields(req))) form.append(k, v);
     if (req.source) {

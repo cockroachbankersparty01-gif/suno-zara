@@ -132,6 +132,7 @@ test('ACE-Step provider: submit, poll, download both variations', async () => {
     if (path.startsWith('/v1/audio')) return { type: 'audio/wav', body: wav };
     return { status: 404, body: '{}' };
   });
+  process.env.ACESTEP_BATCH = 'true';
   try {
     const p = new AceStepProvider(srv.url, 'secret');
     const progress: number[] = [];
@@ -148,8 +149,36 @@ test('ACE-Step provider: submit, poll, download both variations', async () => {
     assert.equal(auth, 'Bearer secret');
     assert.ok(progress.length >= 2);
   } finally {
+    delete process.env.ACESTEP_BATCH;
     srv.close();
   }
+});
+
+test('ACE-Step: variations one at a time by default; unreachable server is a "wait", not a failure', async () => {
+  const wav = encodeWav(new Float32Array(2205).fill(0.1), 22050);
+  const batches: string[] = [];
+  const srv = await fakeServer((path, body) => {
+    if (path === '/release_task') {
+      batches.push(/name="batch_size"\r\n\r\n(\d+)/.exec(body)?.[1] ?? '?');
+      return { body: JSON.stringify({ data: { task_id: 't' + batches.length } }) };
+    }
+    if (path === '/query_result') {
+      const result = JSON.stringify([{ file: '/v1/audio?path=x', seed_value: String(100 + batches.length), metas: { duration: 10 } }]);
+      return { body: JSON.stringify({ data: [{ task_id: 't', status: 1, result }] }) };
+    }
+    return { type: 'audio/wav', body: wav };
+  });
+  try {
+    const out = await new AceStepProvider(srv.url).generate({ ...base, variations: 2 }, ctx);
+    assert.deepEqual(batches, ['1', '1']);
+    assert.deepEqual(out.map((o) => o.seed), [101, 102]);
+  } finally {
+    srv.close();
+  }
+  await assert.rejects(
+    new AceStepProvider('http://127.0.0.1:9').generate({ ...base }, ctx),
+    (e: Error) => e.name === 'ProviderUnavailableError',
+  );
 });
 
 test('ACE-Step failure surfaces as an error', async () => {
