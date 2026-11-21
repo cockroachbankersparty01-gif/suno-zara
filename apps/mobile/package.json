@@ -1,0 +1,16 @@
+{
+  "name": "suno-zara-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "setup": "bash scripts/setup.sh",
+    "start": "expo start",
+    "android": "expo run:android",
+    "typecheck": "tsc --noEmit",
+    "build:apk": "bash scripts/build-apk.sh"
+  },
+  "dependencies": {
+    "expo": "~58.0.0"
+  }
+}

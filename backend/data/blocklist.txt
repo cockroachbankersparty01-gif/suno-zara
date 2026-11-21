@@ -1,0 +1,13 @@
+# Hate / violent-extremist phrases. One per line, matched on word boundaries after
+# leetspeak normalization (0→o, 1→i, 3→e, 4→a, 5→s).
+# This is a STARTER list. Add slurs and terms for every language you support
+# (Hindi, Hinglish, Tamil, etc.) from a maintained source, and pair it with a
+# moderation API before launch — word lists alone miss context.
+kill all
+ethnic cleansing
+gas the
+white power
+heil hitler
+death to all
+exterminate them
+genocide is good

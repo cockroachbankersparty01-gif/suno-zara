@@ -1,0 +1,34 @@
+# Real artists whose names/voices must not be imitated. Extend freely.
+# Avoid names that are also common words ("divine", "drake") — they cause false blocks in prompts.
+taylor swift
+the weeknd
+beyonce
+ed sheeran
+billie eilish
+ariana grande
+bad bunny
+kendrick lamar
+travis scott
+eminem
+rihanna
+justin bieber
+dua lipa
+bts
+blackpink
+arijit singh
+shreya ghoshal
+ar rahman
+a r rahman
+lata mangeshkar
+kishore kumar
+sonu nigam
+atif aslam
+badshah
+diljit dosanjh
+honey singh
+yo yo honey singh
+neha kakkar
+sidhu moose wala
+ap dhillon
+anirudh ravichander
+sid sriram
