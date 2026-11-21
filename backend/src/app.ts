@@ -23,6 +23,15 @@ export function createApp() {
 
   app.get('/health', (_req, res) => res.json({ ok: true, provider: config.musicProvider }));
 
+  // Landing page for links from emails (sign-up confirmation, password reset) opened on a phone.
+  app.get('/', (_req, res) => {
+    res.type('html').send(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Suno Zara</title></head>
+<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#784BA0,#0B0B12 60%);font-family:system-ui,sans-serif;color:#F5F5FA;text-align:center">
+<div style="padding:32px"><div style="font-size:56px">🎵</div><h1 style="margin:8px 0">Suno Zara</h1>
+<p style="font-size:18px;color:#cfcfe0">✅ All set. You can go back to the app and sign in.</p></div></body></html>`);
+  });
+
   // Public bootstrap info for the apps: they only need the server address, the rest comes from here.
   app.get('/config', (_req, res) =>
     res.json({
