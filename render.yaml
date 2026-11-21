@@ -30,7 +30,8 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      # Practice music until the Kaggle GPU worker is set up; then set MUSIC_PROVIDER/RUN_WORKER as the guide says.
+      # Songs are made by the GPU worker (Kaggle notebook), not here: this server has no GPU.
+      # Requests wait in the queue until the notebook is running. Set RUN_WORKER=true for practice tunes instead.
       - key: MUSIC_PROVIDER
         value: mock
       - key: LYRICS_PROVIDER
@@ -38,6 +39,6 @@ services:
       - key: IMAGE_PROVIDER
         value: pollinations
       - key: DEFAULT_DURATION_SEC
-        value: "60"
+        value: "180"
       - key: RUN_WORKER
-        value: "true"
+        value: "false"
