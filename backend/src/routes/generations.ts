@@ -8,7 +8,7 @@ import { generationLimiter } from '../middleware/rateLimit.js';
 import { assertCanAfford, assertConcurrency } from '../services/credits.js';
 import { moderate } from '../services/moderation.js';
 import { SONG_SELECT, toSongDTOs, type SongRow } from '../services/songs.js';
-import type { GenerationInput } from '../worker.js';
+import type { GenerationInput } from '../jobs.js';
 
 export const generations = Router();
 generations.use(requireAuth);

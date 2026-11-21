@@ -1,0 +1,59 @@
+# Builds and tests the backend for real: type-check, unit tests, then starts the server
+# (API + worker) against a real Postgres and runs the end-to-end test.
+name: Backend check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["backend/**", "supabase/**", ".github/workflows/backend.yml"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sunozara
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/sunozara
+      AUTH_MODE: dev
+      STORAGE_DRIVER: local
+      DEFAULT_DURATION_SEC: "20"
+      EXTEND_BY_SEC: "10"
+      GENERATIONS_PER_MINUTE: "60"
+      WORKER_POLL_MS: "300"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install ffmpeg
+        run: which ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: Type-check
+        run: npx tsc --noEmit
+      - name: Unit tests
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Start server (API + worker, auto-creates tables)
+        run: |
+          nohup node dist/all.js > server.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf localhost:4000/health && break; sleep 1; done
+          curl -sf localhost:4000/health || (cat server.log; exit 1)
+      - name: End-to-end test
+        run: node scripts/e2e.mjs
+      - name: Server log
+        if: always()
+        run: cat server.log || true
