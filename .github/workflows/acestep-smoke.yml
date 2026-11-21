@@ -6,12 +6,21 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: [".github/workflows/acestep-smoke.yml", "backend/src/providers/music/acestep.ts", "backend/scripts/acestep-smoke.ts"]
+    paths: [".github/workflows/acestep-smoke.yml", "backend/src/providers/music/acestep.ts", "backend/scripts/acestep-smoke.ts", "backend/src/jobs.ts"]
 
 jobs:
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sunozara
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       HF_HOME: /mnt/hf
       UV_CACHE_DIR: /mnt/uv-cache
@@ -51,6 +60,44 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           ACESTEP_URL=http://127.0.0.1:8001 npx tsx scripts/acestep-smoke.ts
+      - name: Full worker with real ACE-Step (create song via API → worker → stored song)
+        working-directory: backend
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/sunozara
+          AUTH_MODE: dev
+          STORAGE_DRIVER: local
+          MUSIC_PROVIDER: acestep
+          ACESTEP_URL: http://127.0.0.1:8001
+          IMAGE_PROVIDER: mock
+          DEFAULT_DURATION_SEC: "10"
+          WORKER_POLL_MS: "500"
+        run: |
+          npm run build
+          nohup node dist/all.js > server.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf localhost:4000/health && break; sleep 1; done
+          node -e '
+            const B="http://localhost:4000", T={authorization:"Bearer dev:"+crypto.randomUUID(),"content-type":"application/json"};
+            const lyrics="[Chorus]\nTappa tappa tip tip, tappa tappa tip,\nGolu chala masti mein, karta hai flip!";
+            (async()=>{
+              await fetch(B+"/me",{headers:T});
+              const r=await (await fetch(B+"/generations",{method:"POST",headers:T,body:JSON.stringify({mode:"custom",title:"Tappa Tappa Golu",lyrics,styleTags:["kids","playful","bollywood"],instrumental:false})})).json();
+              console.log("queued", r.generation.id);
+              const t0=Date.now();
+              for(;;){ const g=await (await fetch(B+"/generations/"+r.generation.id,{headers:T})).json();
+                console.log(Math.round((Date.now()-t0)/1000)+"s", g.generation.status, g.generation.progress+"%", g.generation.statusText||"");
+                if(g.generation.status==="failed"){console.error("FAILED",g.generation);process.exit(1)}
+                if(g.generation.status==="succeeded"){
+                  for(const s of g.songs){ const a=await fetch(s.audioUrl); const n=(await a.arrayBuffer()).byteLength;
+                    console.log("song",s.title,s.durationSec+"s",n+" bytes",a.headers.get("content-type"),"waveform",s.waveform.length,"model",s.generation.model,"seed",s.generation.seed,"lang",s.generation.params.vocal_language);
+                    if(n<10000) process.exit(1); }
+                  if(g.songs.length!==2) process.exit(1);
+                  console.log("✅ full pipeline OK"); return; }
+                if(Date.now()-t0>1500000) process.exit(1);
+                await new Promise(r=>setTimeout(r,10000)); } })();'
+      - name: Server log
+        if: always()
+        working-directory: backend
+        run: tail -60 server.log || true
       - name: ACE-Step log
         if: always()
         run: tail -150 /mnt/acestep.log || true
