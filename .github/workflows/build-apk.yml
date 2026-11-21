@@ -9,6 +9,9 @@ on:
     branches: [main]
     paths: ["apps/mobile/**", ".github/workflows/build-apk.yml"]
 
+permissions:
+  contents: write   # lets the workflow publish the APK as a Release
+
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -58,3 +61,16 @@ jobs:
           name: SunoZara-apk
           path: apps/mobile/dist/SunoZara.apk
           if-no-files-found: error
+
+      # Publishes the APK as a Release, so it can be downloaded straight to a phone:
+      # https://github.com/<you>/suno-zara/releases/latest
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v1.0.${{ github.run_number }}"
+          gh release create "$TAG" dist/SunoZara.apk \
+            --repo "${{ github.repository }}" \
+            --title "Suno Zara $TAG" \
+            --notes "Tap **SunoZara.apk** below to download, then open it to install. Built from ${{ github.sha }}." \
+            --latest
