@@ -30,10 +30,10 @@ const CreateBody = z.discriminatedUnion('mode', [
     prompt: z.string().trim().max(500).default(''),
     instrumental: z.boolean().default(false),
     seed: z.number().int().nonnegative().optional(),
-  }).refine((b) => b.instrumental || b.lyrics || b.styleTags.length || b.prompt, {
-    message: 'Add lyrics, a style, or a description',
   }),
-]);
+]).refine((b) => b.mode === 'simple' || b.instrumental || !!b.lyrics || b.styleTags.length > 0 || !!b.prompt, {
+  message: 'Add lyrics, a style, or a description',
+});
 
 const ExtendBody = z.object({
   lyrics: z.string().trim().max(5000).optional(),
