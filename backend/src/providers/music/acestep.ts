@@ -20,6 +20,29 @@ interface ResultItem { file: string; seed_value?: string; dit_model?: string; lm
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Common words in romanized Hindi/Hinglish lyrics ("main hoon", "dil", "pyaar"…).
+const HINDI_WORDS = new Set(('hai hain hoon hu main mein mera meri mere tera teri tere tum tu hum aap ka ki ke ko se ne bhi ' +
+  'nahi nahin kya kyun dil pyaar pyar zindagi saath sapne sapna yaar jaan raat din aaj kal chalo karein karo raha rahi ' +
+  'gaya gayi gaye wala wali bola boli aankh aankhein mumma papa didi bhaiya ghar khana chanda mama neend').split(' '));
+
+/**
+ * ACE-Step wants the vocal language. Hindi (Devanagari or romanized Hinglish) is detected from the
+ * lyrics and style; everything else defaults to English. Override with ACESTEP_VOCAL_LANGUAGE.
+ */
+export function detectVocalLanguage(lyrics = '', styleTags: string[] = [], prompt = ''): string {
+  if (process.env.ACESTEP_VOCAL_LANGUAGE) return process.env.ACESTEP_VOCAL_LANGUAGE;
+  if (/[\u0900-\u097F]/.test(lyrics)) return 'hi';
+  if (/[\u0A00-\u0A7F]/.test(lyrics)) return 'pa';
+  const style = `${styleTags.join(' ')} ${prompt}`.toLowerCase();
+  if (/\b(hindi|hinglish|bollywood|desi|bhangra|punjabi|ghazal|qawwali)\b/.test(style)) return 'hi';
+  const words = lyrics.toLowerCase().replace(/\[[^\]]*\]/g, ' ').match(/[a-z]+/g) ?? [];
+  if (words.length >= 8) {
+    const hits = words.filter((w) => HINDI_WORDS.has(w)).length;
+    if (hits / words.length >= 0.12) return 'hi';
+  }
+  return 'en';
+}
+
 export class AceStepProvider implements MusicProvider {
   readonly name = 'acestep';
   constructor(private baseUrl: string, private apiKey?: string) {}
@@ -41,6 +64,8 @@ export class AceStepProvider implements MusicProvider {
       use_random_seed: 'false',
       audio_format: 'mp3',
       task_type: 'text2music',
+      vocal_language: req.instrumental ? 'en' : detectVocalLanguage(req.lyrics, req.styleTags, req.prompt),
+      inference_steps: process.env.ACESTEP_INFERENCE_STEPS ?? '8', // turbo model: 8 is the recommended value
     };
     if (req.mode === 'extend' && req.source) {
       f.task_type = 'repaint';

@@ -1,0 +1,55 @@
+# Runs the real ACE-Step 1.5 API server (CPU, slow) and calls it through our provider code,
+# to verify the integration before using GPU time on Kaggle.
+name: ACE-Step smoke test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [".github/workflows/acestep-smoke.yml", "backend/src/providers/music/acestep.ts", "backend/scripts/acestep-smoke.ts"]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      HF_HOME: /mnt/hf
+      UV_CACHE_DIR: /mnt/uv-cache
+      ACESTEP_DEVICE: cpu
+      ACESTEP_INIT_LLM: "false"
+      ACESTEP_LM_BACKEND: pt
+      ACESTEP_USE_FLASH_ATTENTION: "false"
+      ACESTEP_CONFIG_PATH: acestep-v15-turbo
+      ACESTEP_API_HOST: 127.0.0.1
+      ACESTEP_API_PORT: "8001"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Disk
+        run: df -h / /mnt
+      - name: Install ACE-Step 1.5
+        run: |
+          sudo mkdir -p /mnt/hf /mnt/uv-cache && sudo chown -R $USER /mnt
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          git clone --depth 1 https://github.com/ACE-Step/ACE-Step-1.5.git /mnt/ACE-Step-1.5
+          cd /mnt/ACE-Step-1.5 && ~/.local/bin/uv sync 2>&1 | tail -5
+          df -h /mnt
+      - name: Start ACE-Step API
+        run: |
+          cd /mnt/ACE-Step-1.5
+          nohup ~/.local/bin/uv run acestep-api > /mnt/acestep.log 2>&1 &
+          for i in $(seq 1 180); do
+            curl -sf http://127.0.0.1:8001/health && break
+            sleep 10
+          done
+          curl -sf http://127.0.0.1:8001/health || (tail -80 /mnt/acestep.log; exit 1)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Call it through our provider
+        working-directory: backend
+        run: |
+          npm install --no-audit --no-fund
+          ACESTEP_URL=http://127.0.0.1:8001 npx tsx scripts/acestep-smoke.ts
+      - name: ACE-Step log
+        if: always()
+        run: tail -150 /mnt/acestep.log || true
