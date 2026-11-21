@@ -48,7 +48,7 @@ export function SongRow({ song, list, onMore, showAuthor }: {
 
 const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: space(2.5), paddingHorizontal: space(4), borderRadius: radius.md },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   badge: { color: colors.accent, fontWeight: '800', letterSpacing: 0.5 },
 });

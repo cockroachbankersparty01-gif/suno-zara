@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MiniPlayer } from '../../src/components/MiniPlayer';
 import { friendlyError, type Generation, type Song } from '../../src/api';
 import { SongActions } from '../../src/components/SongActions';
 import { Chip, Cover, ErrorBanner, Field, GradientBar, GradientButton, IconButton, Segmented, Toggle } from '../../src/components/ui';
@@ -198,6 +199,7 @@ export default function Create() {
         </ScrollView>
       </KeyboardAvoidingView>
       <SongActions song={selected} onClose={() => setSelected(null)} onChanged={setSelected} />
+      <MiniPlayer />
     </SafeAreaView>
   );
 }
@@ -275,5 +277,5 @@ const s = StyleSheet.create({
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space(2) },
   aiBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: space(3), paddingVertical: space(1.5), borderRadius: radius.pill, backgroundColor: 'rgba(255,60,172,0.12)' },
   result: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
-  playOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' },
+  playOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' },
 });

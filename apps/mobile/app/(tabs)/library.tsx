@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MiniPlayer } from '../../src/components/MiniPlayer';
 import { friendlyError, type Song } from '../../src/api';
 import { SongActions } from '../../src/components/SongActions';
 import { SongRow } from '../../src/components/SongRow';
@@ -118,6 +119,7 @@ export default function Library() {
         onChanged={(x) => { setSongs((p) => p.map((y) => (y.id === x.id ? x : y))); setSelected(x); }}
         onDeleted={(id) => setSongs((p) => p.filter((x) => x.id !== id))}
       />
+      <MiniPlayer />
     </SafeAreaView>
   );
 }

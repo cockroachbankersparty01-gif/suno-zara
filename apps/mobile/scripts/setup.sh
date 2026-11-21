@@ -8,7 +8,7 @@ npm install --no-audit --no-fund
 
 npx expo install \
   react react-native \
-  expo-router @react-navigation/bottom-tabs expo-linking expo-constants expo-status-bar expo-splash-screen \
+  expo-router expo-system-ui expo-linking expo-constants expo-status-bar expo-splash-screen \
   react-native-safe-area-context react-native-screens \
   expo-audio expo-linear-gradient expo-web-browser expo-crypto expo-build-properties \
   @expo/vector-icons @react-native-async-storage/async-storage \

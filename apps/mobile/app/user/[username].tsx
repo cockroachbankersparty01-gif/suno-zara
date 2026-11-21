@@ -79,7 +79,7 @@ export default function UserPage() {
             </View>
           }
           renderItem={({ item }) => <SongRow song={item} list={songs} onMore={setSelected} />}
-          ListEmptyComponent={profile ? <Empty icon="musical-notes-outline" title="No public songs yet" /> : null}
+          ListEmptyComponent={profile ? <Empty icon="musical-notes-outline" title="No public songs yet" /> : undefined}
           contentContainerStyle={{ paddingBottom: space(10) }}
         />
       )}

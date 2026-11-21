@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MiniPlayer } from '../../src/components/MiniPlayer';
 import { friendlyError } from '../../src/api';
 import { ErrorBanner, Field, GhostButton, GradientButton } from '../../src/components/ui';
 import { usePlayer } from '../../src/player';
@@ -121,6 +122,7 @@ export default function Profile() {
         </View>
         <Text style={[type.tiny, { textAlign: 'center' }]}>Suno Zara v{Constants.expoConfig?.version ?? '1.0.0'} · free & open-source</Text>
       </ScrollView>
+      <MiniPlayer />
     </SafeAreaView>
   );
 }
