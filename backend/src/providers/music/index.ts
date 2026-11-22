@@ -1,5 +1,6 @@
 import { config } from '../../config.js';
 import { AceStepProvider } from './acestep.js';
+import { DeApiProvider } from './deapi.js';
 import { MockMusicProvider } from './mock.js';
 import type { MusicProvider } from './types.js';
 
@@ -16,8 +17,11 @@ export function musicProvider(): MusicProvider {
     case 'acestep':
       instance = new AceStepProvider(config.acestep.url, config.acestep.apiKey || undefined);
       break;
+    case 'deapi':
+      instance = new DeApiProvider(process.env.DEAPI_API_KEY?.trim() || undefined);
+      break;
     default:
-      throw new Error(`Unknown MUSIC_PROVIDER "${config.musicProvider}" (use mock or acestep)`);
+      throw new Error(`Unknown MUSIC_PROVIDER "${config.musicProvider}" (use mock, acestep or deapi)`);
   }
   return instance;
 }

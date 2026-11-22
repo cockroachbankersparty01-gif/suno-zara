@@ -1,4 +1,14 @@
 import 'dotenv/config';
+import { createRequire } from 'node:module';
+
+/** ffmpeg binary shipped by the ffmpeg-static package, if installed (hosts like Render have no system ffmpeg). */
+function bundledFfmpeg(): string | undefined {
+  try {
+    return (createRequire(import.meta.url)('ffmpeg-static') as string | null) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Values are often pasted from a notes app on a phone, so forgive the usual slips:
@@ -60,7 +70,7 @@ export const config = {
   /** mock | pollinations (free, no key) */
   imageProvider: process.env.IMAGE_PROVIDER ?? 'mock',
   pollinationsToken: process.env.POLLINATIONS_TOKEN ?? '',
-  ffmpegPath: process.env.FFMPEG_PATH ?? 'ffmpeg',
+  ffmpegPath: process.env.FFMPEG_PATH ?? bundledFfmpeg() ?? 'ffmpeg',
 
   /** Everything is free. Credits are only a daily fair-use quota to share limited GPU time. */
   credits: {

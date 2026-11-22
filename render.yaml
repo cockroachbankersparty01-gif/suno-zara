@@ -30,10 +30,14 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      # Songs are made by the GPU worker (Kaggle notebook), not here: this server has no GPU.
-      # Requests wait in the queue until the notebook is running. Set RUN_WORKER=true for practice tunes instead.
+      # Real AI singing via deAPI (hosted ACE-Step 1.5, pay per track, free sign-up credits).
+      # Paste your key from app.deapi.ai into DEAPI_API_KEY. Without a key, songs wait in the queue.
       - key: MUSIC_PROVIDER
-        value: mock
+        value: deapi
+      - key: DEAPI_MODEL
+        value: AceStep_1_5_Turbo
+      - key: DEAPI_API_KEY
+        sync: false
       - key: LYRICS_PROVIDER
         value: mock
       - key: IMAGE_PROVIDER
@@ -41,4 +45,4 @@ services:
       - key: DEFAULT_DURATION_SEC
         value: "180"
       - key: RUN_WORKER
-        value: "false"
+        value: "true"

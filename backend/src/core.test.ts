@@ -5,6 +5,7 @@ import { MockMusicProvider } from './providers/music/mock.js';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { AceStepProvider, detectVocalLanguage } from './providers/music/acestep.js';
+import { DeApiProvider } from './providers/music/deapi.js';
 import { MockLyricsProvider, OpenAICompatibleLyricsProvider } from './providers/lyrics/index.js';
 import { MockImageProvider, PollinationsImageProvider } from './providers/image/index.js';
 import { encodeWav } from './lib/audio.js';
@@ -229,4 +230,51 @@ test('vocal language detection for Hindi / Hinglish / English', () => {
   const f = AceStepProvider.buildFields({ ...base, lyrics: golu, variations: 2 });
   assert.equal(f.vocal_language, 'hi');
   assert.equal(AceStepProvider.buildFields({ ...base, instrumental: true }).vocal_language, 'en');
+});
+
+test('deAPI provider: form fields, polling, download, two variations', async () => {
+  const mp3 = Buffer.alloc(20_000, 7);
+  const submitted: URLSearchParams[] = [];
+  let polls = 0;
+  let auth = '';
+  const srv = await fakeServer((path, body, headers) => {
+    if (path === '/api/v1/client/txt2music') {
+      auth = String(headers.authorization ?? '');
+      submitted.push(new URLSearchParams(body));
+      return { body: JSON.stringify({ data: { request_id: 'r' + submitted.length } }) };
+    }
+    if (path.startsWith('/api/v1/client/request-status/')) {
+      polls++;
+      const done = polls % 2 === 0;
+      return { body: JSON.stringify({ data: done ? { status: 'done', result_url: `${srvUrl}/file.mp3` } : { status: 'processing' } }) };
+    }
+    if (path === '/file.mp3') return { type: 'audio/mpeg', body: mp3 };
+    return { status: 404, body: '{}' };
+  });
+  const srvUrl = srv.url;
+  process.env.DEAPI_BASE_URL = `${srv.url}/api/v1/client`;
+  try {
+    const { DeApiProvider: P } = await import(`./providers/music/deapi.js?x=${Date.now()}`);
+    const golu = '[Chorus]\nTappa tappa tip tip, Golu chala masti mein, karta hai flip! Mumma boli uth ja Golu, baj gayi ghadi';
+    const out = await new P('key123').generate({ ...base, lyrics: golu, styleTags: ['kids', 'playful'], variations: 2, durationSec: 180 }, ctx);
+    assert.equal(out.length, 2);
+    assert.equal(auth, 'Bearer key123');
+    assert.equal(submitted.length, 2);
+    assert.equal(submitted[0].get('model'), 'AceStep_1_5_Turbo');
+    assert.equal(submitted[0].get('duration'), '180');
+    assert.equal(submitted[0].get('format'), 'mp3');
+    assert.match(submitted[0].get('caption')!, /kids, playful, hindi vocals/);
+    assert.notEqual(submitted[0].get('seed'), submitted[1].get('seed'));
+    assert.ok(out[0].audio.equals(mp3));
+  } finally {
+    delete process.env.DEAPI_BASE_URL;
+    srv.close();
+  }
+});
+
+test('deAPI without a key waits instead of failing', async () => {
+  await assert.rejects(new DeApiProvider(undefined).generate({ ...base }, ctx), (e: Error) => e.name === 'ProviderUnavailableError');
+  const f = DeApiProvider.buildForm({ ...base, instrumental: true }, 'AceStep_1_5_Base');
+  assert.equal(f.lyrics, '[Instrumental]');
+  assert.equal(f.inference_steps, '40');
 });
