@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import path from 'node:path';
 import { config } from './config.js';
+import { pool } from './db.js';
 import { errorHandler } from './lib/errors.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { optionalAuth } from './middleware/auth.js';
@@ -22,6 +23,34 @@ export function createApp() {
   app.use((req, _res, next) => requestBase.run(`${req.protocol}://${req.get('host')}`, next));
 
   app.get('/health', (_req, res) => res.json({ ok: true, provider: config.musicProvider }));
+
+  // Public health/status summary for troubleshooting. Never includes keys, user data or prompts.
+  app.get('/status', async (_req, res) => {
+    const scrub = (t: string | null) =>
+      (t ?? '').replace(/(sb_secret_|sb_publishable_|Bearer\s+)[\w-]+/gi, '$1***').replace(/postgres(ql)?:\/\/\S+/gi, 'postgres://***').slice(0, 300);
+    try {
+      const counts = await pool.query(
+        `select status, count(*)::int as n from generations where created_at > now() - interval '7 days' group by status`,
+      );
+      const recent = await pool.query(
+        `select status, attempts, status_text, error, created_at, completed_at from generations order by created_at desc limit 5`,
+      );
+      res.json({
+        ok: true,
+        musicProvider: config.musicProvider,
+        deapiKeySet: !!process.env.DEAPI_API_KEY?.trim(),
+        runWorker: process.env.RUN_WORKER !== 'false',
+        ffmpeg: config.ffmpegPath !== 'ffmpeg' ? 'bundled' : 'system',
+        last7Days: Object.fromEntries(counts.rows.map((r: any) => [r.status, r.n])),
+        recent: recent.rows.map((r: any) => ({
+          status: r.status, attempts: r.attempts, statusText: r.status_text, error: scrub(r.error),
+          createdAt: r.created_at, completedAt: r.completed_at,
+        })),
+      });
+    } catch (e) {
+      res.status(500).json({ ok: false, error: scrub(String((e as Error).message)) });
+    }
+  });
 
   // Landing page for links from emails (sign-up confirmation, password reset) opened on a phone.
   app.get('/', (_req, res) => {

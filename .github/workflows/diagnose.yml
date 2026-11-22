@@ -1,30 +1,14 @@
-# One-off check: does the server hand out a Supabase key that Supabase accepts?
+# Checks the live server: config, music worker status and the latest song errors (no secrets shown).
 name: Diagnose server
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: [".github/workflows/diagnose.yml"]
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Server config + key check
+      - name: Server status
         run: |
-          set +e
           SERVER=https://suno-zara.onrender.com
-          for i in 1 2 3 4 5 6; do CFG=$(curl -s --max-time 70 $SERVER/config) && [ -n "$CFG" ] && break; sleep 10; done
-          echo "config: $CFG"
-          URL=$(echo "$CFG" | jq -r .supabaseUrl)
-          KEY=$(echo "$CFG" | jq -r .supabaseAnonKey)
-          echo "supabaseUrl=[$URL]"
-          echo "anon key: length=${#KEY} starts=${KEY:0:18} ends=${KEY: -6}"
-          printf '%s' "$KEY" | od -c | tail -3
-          echo "--- Supabase says (with server's key):"
-          curl -s -o /dev/null -w "HTTP %{http_code}\n" "$URL/auth/v1/settings" -H "apikey: $KEY"
-          curl -s "$URL/auth/v1/settings" -H "apikey: $KEY" | head -c 300; echo
-          echo "--- Supabase says (with the key from the dashboard):"
-          GOOD=sb_publishable_ey69YSxw3BgGev7wjpPhAA_u3KX3c6Z
-          curl -s -o /dev/null -w "HTTP %{http_code}\n" "https://vskjuvqhgrzqorkzmmrp.supabase.co/auth/v1/settings" -H "apikey: $GOOD"
-          curl -s "https://vskjuvqhgrzqorkzmmrp.supabase.co/auth/v1/settings" -H "apikey: $GOOD" | head -c 300; echo
-          [ "$KEY" = "$GOOD" ] && echo "SAME KEY" || echo "KEYS DIFFER"
+          for i in 1 2 3 4 5 6; do curl -s --max-time 70 -o status.json -w "%{http_code}\n" $SERVER/status && [ -s status.json ] && break; sleep 10; done
+          jq . status.json || cat status.json
+          echo "--- config"; curl -s --max-time 60 $SERVER/config | jq -c '{authMode, unlimited}'
